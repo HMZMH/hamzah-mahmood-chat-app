@@ -1,205 +1,107 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Modal, Switch, FlatList } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import styles from './ChatScreenStyles';
 
-const styles = {
-  container: {
-    flex: 1,
-  },
-  chatHeader: {
-    backgroundColor: '#075E54',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#128C7E',
-  },
-  chatHeaderText: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end', // Right-align user messages
-    marginBottom: 10,
-    paddingHorizontal: 10,
-  },
-  messageBubble: {
-    maxWidth: '75%',
-    borderRadius: 10,
-    padding: 10,
-    marginLeft: 10,
-    backgroundColor: '#ECE5DD',
-  },
-  userMessageBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#DCF8C6',
-  },
-  senderInfo: {
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  senderImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  senderName: {
-    fontWeight: 'bold',
-  },
-  sendMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderTopWidth: 1,
-    borderTopColor: '#ECE5DD',
-    backgroundColor: 'white',
-  },
-  messageInput: {
-    flex: 1,
-    borderWidth: 0,
-    borderRadius: 30,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: '#F4F4F4',
-    marginRight: 10,
-  },
-  sendButton: {
-    backgroundColor: '#128C7E',
-    borderRadius: 30,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-  },
-  sendButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#777',
-  },
-  replyMessageBubble: {
-    backgroundColor: '#DCF8C6',
-    borderRadius: 10,
-    padding: 10,
-    marginLeft: 10,
-  },
-  italicText: {
-    fontStyle: 'italic',
-  },
-  messageOptions: {
-    width: 150,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ECE5DD',
-    position: 'absolute',
-  },
-};
+const senderImage = require('../assets/senderImage.png');
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
-  const longPressTimeout = useRef(null);
-  const replyToMessage = useRef(null);
-  const senderName = 'Hamzah';
-  const senderImage = require('../assets/senderImage.jpg');
+  const [inputMessage, setInputMessage] = useState('');
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
 
-  const getCurrentTime = () => {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    return `${hours}:${minutes}`;
-  };
-
-  const handleSendMessage = () => {
-    if (text.trim() !== '') {
-      const newMessage = { text, isUser: true, time: getCurrentTime() };
+  const sendMessage = () => {
+    if (inputMessage.trim() !== '') {
+      const newMessage = {
+        id: Math.random().toString(36).substr(2, 9),
+        text: inputMessage,
+        sender: 'You', // Change this as needed
+        timestamp: new Date().toLocaleTimeString(),
+      };
       setMessages([...messages, newMessage]);
-      setText('');
+      setInputMessage('');
     }
   };
 
-  const handleLongPress = (message) => {
-    clearTimeout(longPressTimeout.current);
-    longPressTimeout.current = setTimeout(() => {
-      Alert.alert(
-        'Message Options',
-        '',
-        [
-          {
-            text: 'Delete',
-            onPress: () => handleDeleteMessage(message),
-            style: 'destructive',
-          },
-          {
-            text: 'Reply',
-            onPress: () => handleReplyToMessage(message),
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
-        { cancelable: true }
-      );
-    }, 500);
+  const toggleSettingsModal = () => {
+    setIsSettingsVisible(!isSettingsVisible);
   };
 
-  const handleDeleteMessage = (message) => {
-    const updatedMessages = messages.filter((msg) => msg !== message);
-    setMessages(updatedMessages);
+  const clearChat = () => {
+    setMessages([]);
+    toggleSettingsModal();
   };
 
-  const handleReplyToMessage = (message) => {
-    replyToMessage.current = message;
-    setText(`Replying to:\n"${message.text}"\n\n`);
+  const adjustFontSize = (newSize) => {
+    setFontSize(newSize);
+    toggleSettingsModal();
   };
+
+  const renderMessage = ({ item }) => (
+    <View style={item.sender === 'You' ? styles.sentMessage : styles.receivedMessage}>
+      <Text style={{ ...styles.messageText, fontSize: fontSize }}>{item.text}</Text>
+      <Text style={styles.timestamp}>{item.timestamp}</Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.chatHeader}>
-        <Text style={styles.chatHeaderText}>Chat App</Text>
+      <View style={styles.header}>
+        <Image source={senderImage} style={styles.profileImage} />
+        <Text style={styles.recipientName}>Recipient's Name</Text>
+        <TouchableOpacity style={styles.settingsButton} onPress={toggleSettingsModal}>
+          <FontAwesome name="cog" size={24} color="black" />
+        </TouchableOpacity>
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSettingsVisible}
+        onRequestClose={toggleSettingsModal}
+      >
+        <View style={styles.settingsModal}>
+          <Text style={styles.settingsTitle}>Settings</Text>
+          <View style={styles.settingOption}>
+            <Text>Dark Mode</Text>
+            <Switch value={isDarkMode} onValueChange={() => setIsDarkMode(!isDarkMode)} />
+          </View>
+          <TouchableOpacity style={styles.settingOption} onPress={clearChat}>
+            <Text>Clear Chat</Text>
+          </TouchableOpacity>
+          <Text style={styles.settingsTitle}>Font Size</Text>
+          <View style={styles.settingOption}>
+            <Text>Small</Text>
+            <Switch value={fontSize === 12} onValueChange={() => adjustFontSize(12)} />
+          </View>
+          <View style={styles.settingOption}>
+            <Text>Medium</Text>
+            <Switch value={fontSize === 16} onValueChange={() => adjustFontSize(16)} />
+          </View>
+          <View style={styles.settingOption}>
+            <Text>Large</Text>
+            <Switch value={fontSize === 20} onValueChange={() => adjustFontSize(20)} />
+          </View>
+        </View>
+      </Modal>
 
       <FlatList
         data={messages}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onLongPress={() => handleLongPress(item)}
-            style={styles.messageContainer}
-          >
-            <View style={styles.senderInfo}>
-              <Image source={senderImage} style={styles.senderImage} />
-              <Text style={styles.senderName}>{senderName}</Text>
-            </View>
-            <View style={styles.messageBubble}>
-              {item.isReply && (
-                <View style={styles.replyMessageBubble}>
-                  <Text style={styles.italicText}>Replying to:</Text>
-                  <Text>{'\n'}</Text>
-                  <Text style={styles.italicText}>{`"${replyToMessage.current.text}"`}</Text>
-                </View>
-              )}
-              <Text>{item.text}</Text>
-              <Text style={styles.timestamp}>{item.time}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        renderItem={renderMessage}
+        keyExtractor={(item) => item.id.toString()}
       />
 
-      <View style={styles.sendMessageContainer}>
+      <View style={styles.inputContainer}>
         <TextInput
-          style={styles.messageInput}
-          placeholder="Type a message..."
-          value={text}
-          onChangeText={setText}
+          style={{ ...styles.inputMessage, fontSize: fontSize }}
+          placeholder="Type your message..."
+          value={inputMessage}
+          onChangeText={(text) => setInputMessage(text)}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-          <Text style={styles.sendButtonText}>Send</Text>
+        <TouchableOpacity onPress={sendMessage}>
+          <FontAwesome name="send" size={24} color="green" />
         </TouchableOpacity>
       </View>
     </View>
